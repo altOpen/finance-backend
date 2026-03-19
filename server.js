@@ -24,3 +24,6 @@ app.listen(PORT, () => {
 
 const authRoutes = require("./routes/auth.routes");
 app.use("/api/auth", authRoutes);
+
+const depositRoutes = require("./routes/deposits.routes");
+app.use("/api/deposits", depositRoutes);
