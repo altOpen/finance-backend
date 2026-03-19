@@ -1,37 +1,41 @@
 const db = require("../config/db");
 
 // Get all members
-exports.getMembers = (req, res) => {
-    db.query("SELECT * FROM members", (err, result) => {
-        if (err) return res.status(500).send(err);
-        res.json(result);
-    });
+exports.getMembers = async (req, res) => {
+    try {
+        const result = await db.query("SELECT * FROM members");
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).send(err);
+    }
 };
 
 // Add member
-exports.addMember = (req, res) => {
+exports.addMember = async (req, res) => {
     const { name, phone, address } = req.body;
 
-    db.query(
-        "INSERT INTO members (name, phone, address) VALUES (?, ?, ?)",
-        [name, phone, address],
-        (err, result) => {
-            if (err) return res.status(500).send(err);
-            res.json({ message: "Member added" });
-        }
-    );
+    try {
+        await db.query(
+            "INSERT INTO members (name, phone, address) VALUES ($1, $2, $3)",
+            [name, phone, address]
+        );
+        res.json({ message: "Member added" });
+    } catch (err) {
+        res.status(500).send(err);
+    }
 };
 
 // Delete member
-exports.deleteMember = (req, res) => {
+exports.deleteMember = async (req, res) => {
     const id = req.params.id;
 
-    db.query(
-        "DELETE FROM members WHERE member_id = ?",
-        [id],
-        (err) => {
-            if (err) return res.status(500).send(err);
-            res.json({ message: "Deleted" });
-        }
-    );
+    try {
+        await db.query(
+            "DELETE FROM members WHERE member_id = $1",
+            [id]
+        );
+        res.json({ message: "Deleted" });
+    } catch (err) {
+        res.status(500).send(err);
+    }
 };
