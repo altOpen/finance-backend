@@ -30,3 +30,6 @@ app.use("/api/deposits", depositRoutes);
 
 const loanRoutes = require("./routes/loans.routes");
 app.use("/api/loans", loanRoutes);
+
+const dashboardRoutes = require("./routes/dashboard.routes");
+app.use("/api/dashboard", dashboardRoutes);
