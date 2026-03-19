@@ -27,3 +27,6 @@ app.use("/api/auth", authRoutes);
 
 const depositRoutes = require("./routes/deposits.routes");
 app.use("/api/deposits", depositRoutes);
+
+const loanRoutes = require("./routes/loans.routes");
+app.use("/api/loans", loanRoutes);
