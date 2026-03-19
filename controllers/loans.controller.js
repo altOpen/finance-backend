@@ -49,34 +49,39 @@ exports.getLoanDetails = async (req, res) => {
 exports.addPayment = async (req, res) => {
     const { loan_id, amount } = req.body;
 
-    const loanRes = await db.query(
-        "SELECT * FROM loans WHERE loan_id=$1",
-        [loan_id]
-    );
+    try {
+        const loanRes = await db.query(
+            "SELECT * FROM loans WHERE loan_id=$1",
+            [loan_id]
+        );
 
-    const loan = loanRes.rows[0];
+        const loan = loanRes.rows[0];
 
-    const paidRes = await db.query(
-        "SELECT SUM(principal_paid) as paid FROM loan_payments WHERE loan_id=$1",
-        [loan_id]
-    );
+        const paidRes = await db.query(
+            "SELECT SUM(principal_paid) as paid FROM loan_payments WHERE loan_id=$1",
+            [loan_id]
+        );
 
-    let principalPaid = paidRes.rows[0].paid || 0;
-    let balance = loan.principal - principalPaid;
+        let principalPaid = paidRes.rows[0].paid || 0;
+        let balance = loan.principal - principalPaid;
 
-    let monthlyRate = loan.interest_rate / 100 / 12;
-    let interest = balance * monthlyRate;
+        let monthlyRate = loan.interest_rate / 100 / 12;
+        let interest = balance * monthlyRate;
 
-    let principal = amount - interest;
+        let principal = amount - interest;
+        if (principal < 0) principal = 0;
 
-    if (principal < 0) principal = 0;
+        await db.query(
+            "INSERT INTO loan_payments (loan_id, amount, interest_paid, principal_paid) VALUES ($1,$2,$3,$4)",
+            [loan_id, amount, interest, principal]
+        );
 
-    await db.query(
-        "INSERT INTO loan_payments (loan_id, amount, interest_paid, principal_paid) VALUES ($1,$2,$3,$4)",
-        [loan_id, amount, interest, principal]
-    );
+        res.json({ message: "Payment added" });
 
-    res.json({ message: "Payment added", interest, principal });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+    }
 };
 
 // EMI INFO
