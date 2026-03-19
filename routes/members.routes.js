@@ -5,6 +5,7 @@ const controller = require("../controllers/members.controller");
 
 router.get("/", controller.getMembers);
 router.post("/", controller.addMember);
+router.put("/:id", controller.updateMember);
 router.delete("/:id", controller.deleteMember);
 
 module.exports = router;
