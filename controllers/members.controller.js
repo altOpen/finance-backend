@@ -2,12 +2,25 @@ const db = require("../config/db");
 
 // GET
 exports.getMembers = async (req, res) => {
-    try {
-        const result = await db.query("SELECT * FROM members ORDER BY member_id DESC");
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).send(err);
-    }
+    let status = req.query.status || 'active';
+
+    const result = await db.query(
+        "SELECT * FROM members WHERE status=$1 ORDER BY member_id DESC",
+        [status]
+    );
+
+    res.json(result.rows);
+};
+
+exports.deactivateMember = async (req, res) => {
+    const id = req.params.id;
+
+    await db.query(
+        "UPDATE members SET status='inactive' WHERE member_id=$1",
+        [id]
+    );
+
+    res.json({ message: "Member inactive" });
 };
 
 // ADD

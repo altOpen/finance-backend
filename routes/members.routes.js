@@ -8,4 +8,5 @@ router.post("/", controller.addMember);
 router.put("/:id", controller.updateMember);
 router.delete("/:id", controller.deleteMember);
 router.put("/:id", controller.updateMember);
+router.put("/deactivate/:id", controller.deactivateMember);
 module.exports = router;
