@@ -3,33 +3,32 @@ const cors = require("cors");
 
 const app = express();
 
+// ================= MIDDLEWARE =================
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// ================= ROUTES IMPORT =================
 const memberRoutes = require("./routes/members.routes");
-app.use("/api/members", memberRoutes);
+const authRoutes = require("./routes/auth.routes");
+const depositRoutes = require("./routes/deposits.routes");
+const loanRoutes = require("./routes/loans.routes");
+const dashboardRoutes = require("./routes/dashboard.routes");
 
-// Test route
+// ================= ROUTES USE =================
+app.use("/api/members", memberRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/deposits", depositRoutes);
+app.use("/api/loans", loanRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+
+// ================= TEST ROUTE =================
 app.get("/", (req, res) => {
     res.send("API Running");
 });
 
-// PORT (Render compatible)
+// ================= START SERVER =================
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
     console.log("Server running on port " + PORT);
 });
-
-const authRoutes = require("./routes/auth.routes");
-app.use("/api/auth", authRoutes);
-
-const depositRoutes = require("./routes/deposits.routes");
-app.use("/api/deposits", depositRoutes);
-
-const loanRoutes = require("./routes/loans.routes");
-app.use("/api/loans", loanRoutes);
-
-const dashboardRoutes = require("./routes/dashboard.routes");
-app.use("/api/dashboard", dashboardRoutes);

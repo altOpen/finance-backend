@@ -3,7 +3,7 @@ const router = express.Router();
 
 const controller = require("../controllers/dashboard.controller");
 
-// GET DASHBOARD
+// GET DASHBOARD DATA
 router.get("/", controller.getDashboard);
 
 module.exports = router;
