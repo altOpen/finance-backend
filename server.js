@@ -28,7 +28,9 @@ app.get("/", (req, res) => {
 
 // ================= START SERVER =================
 const PORT = process.env.PORT || 5000;
-
+app.get("/test-dashboard", (req, res) => {
+    res.send("Dashboard route file loaded");
+});
 app.listen(PORT, () => {
     console.log("Server running on port " + PORT);
 });
