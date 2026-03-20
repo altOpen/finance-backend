@@ -61,3 +61,19 @@ exports.deleteMember = async (req, res) => {
         res.status(500).send(err);
     }
 };
+
+exports.updateMember = async (req, res) => {
+    const id = req.params.id;
+    const { name, phone, address } = req.body;
+
+    try {
+        await db.query(
+            "UPDATE members SET name=$1, phone=$2, address=$3 WHERE member_id=$4",
+            [name, phone, address, id]
+        );
+
+        res.json({ message: "Member updated" });
+    } catch (err) {
+        res.status(500).send(err);
+    }
+};
