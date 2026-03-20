@@ -6,36 +6,33 @@ function calculateEMI(P, r, n) {
     return (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
 }
 
-// GET loans
-exports.getLoans = async (req, res) => {
-    const result = await db.query(`
-        SELECT l.*, m.name
-        FROM loans l
-        JOIN members m ON l.member_id = m.member_id
-    `);
-    res.json(result.rows);
-};
-
-// ADD loan (with tenure)
+// CREATE LOAN
 exports.addLoan = async (req, res) => {
     const { member_id, principal, interest_rate, tenure } = req.body;
 
+    let emi = calculateEMI(principal, interest_rate, tenure);
+
+    let nextDue = new Date();
+    nextDue.setMonth(nextDue.getMonth() + 1);
+
     await db.query(
-        "INSERT INTO loans (member_id, principal, interest_rate, tenure) VALUES ($1,$2,$3,$4)",
-        [member_id, principal, interest_rate, tenure]
+        `INSERT INTO loans 
+        (member_id, principal, interest_rate, tenure, emi, next_due_date)
+        VALUES ($1,$2,$3,$4,$5,$6)`,
+        [member_id, principal, interest_rate, tenure, emi, nextDue]
     );
 
-    res.json({ message: "Loan created" });
+    res.json({ message: "Loan created", emi });
 };
 
-// GET details
+// GET LOAN DETAILS
 exports.getLoanDetails = async (req, res) => {
     const id = req.params.id;
 
     const loan = await db.query("SELECT * FROM loans WHERE loan_id=$1", [id]);
 
     const payments = await db.query(
-        "SELECT * FROM loan_payments WHERE loan_id=$1",
+        "SELECT * FROM loan_payments WHERE loan_id=$1 ORDER BY payment_date DESC",
         [id]
     );
 
@@ -45,75 +42,57 @@ exports.getLoanDetails = async (req, res) => {
     });
 };
 
-// AUTO INTEREST + PAYMENT
+// ADD PAYMENT (PRO LOGIC)
 exports.addPayment = async (req, res) => {
-    const { loan_id, amount } = req.body;
+    const { loan_id, amount, type } = req.body;
 
-    try {
-        const loanRes = await db.query(
-            "SELECT * FROM loans WHERE loan_id=$1",
-            [loan_id]
-        );
+    const loanRes = await db.query("SELECT * FROM loans WHERE loan_id=$1", [loan_id]);
+    const loan = loanRes.rows[0];
 
-        const loan = loanRes.rows[0];
-
-        const paidRes = await db.query(
-            "SELECT SUM(principal_paid) as paid FROM loan_payments WHERE loan_id=$1",
-            [loan_id]
-        );
-
-        let principalPaid = paidRes.rows[0].paid || 0;
-        let balance = loan.principal - principalPaid;
-
-        let monthlyRate = loan.interest_rate / 100 / 12;
-        let interest = balance * monthlyRate;
-
-        let principal = amount - interest;
-        if (principal < 0) principal = 0;
-
-        await db.query(
-            "INSERT INTO loan_payments (loan_id, amount, interest_paid, principal_paid) VALUES ($1,$2,$3,$4)",
-            [loan_id, amount, interest, principal]
-        );
-
-        res.json({ message: "Payment added" });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).send(err);
-    }
-};
-
-// EMI INFO
-exports.getEMI = async (req, res) => {
-    const id = req.params.id;
-
-    const loan = await db.query("SELECT * FROM loans WHERE loan_id=$1", [id]);
-
-    const l = loan.rows[0];
-
-    let emi = calculateEMI(l.principal, l.interest_rate, l.tenure);
-
-    res.json({ emi: emi.toFixed(2) });
-};
-
-// FORECLOSURE
-exports.forecloseLoan = async (req, res) => {
-    const id = req.params.id;
-
-    const loan = await db.query("SELECT * FROM loans WHERE loan_id=$1", [id]);
-
-    const paid = await db.query(
+    const paidRes = await db.query(
         "SELECT SUM(principal_paid) as paid FROM loan_payments WHERE loan_id=$1",
-        [id]
+        [loan_id]
     );
 
-    let balance = loan.rows[0].principal - (paid.rows[0].paid || 0);
+    let principalPaid = paidRes.rows[0].paid || 0;
+    let balance = loan.principal - principalPaid;
+
+    let monthlyRate = loan.interest_rate / 100 / 12;
+    let interest = balance * monthlyRate;
+
+    let principal = 0;
+
+    // PAYMENT TYPE LOGIC
+    if (type === "emi") {
+        principal = loan.emi - interest;
+    } 
+    else if (type === "interest") {
+        principal = 0;
+    } 
+    else if (type === "principal") {
+        principal = amount;
+        interest = 0;
+    } 
+    else if (type === "foreclose") {
+        principal = balance;
+        interest = 0;
+    }
 
     await db.query(
-        "INSERT INTO loan_payments (loan_id, amount, interest_paid, principal_paid) VALUES ($1,$2,0,$2)",
-        [id, balance]
+        `INSERT INTO loan_payments 
+        (loan_id, amount, interest_paid, principal_paid, payment_type)
+        VALUES ($1,$2,$3,$4,$5)`,
+        [loan_id, amount, interest, principal, type]
     );
 
-    res.json({ message: "Loan closed", balance });
+    // UPDATE NEXT DUE DATE
+    let nextDue = new Date(loan.next_due_date);
+    nextDue.setMonth(nextDue.getMonth() + 1);
+
+    await db.query(
+        "UPDATE loans SET next_due_date=$1 WHERE loan_id=$2",
+        [nextDue, loan_id]
+    );
+
+    res.json({ message: "Payment recorded" });
 };
